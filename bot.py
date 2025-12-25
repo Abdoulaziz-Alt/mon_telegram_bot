@@ -14,7 +14,7 @@ from telegram.ext import (
 ACCESS_CODE = "python123"
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# Vérification du token (IMPORTANT)
+# Vérification du token
 if not BOT_TOKEN:
     raise ValueError("❌ BOT_TOKEN manquant. Vérifie la variable d'environnement sur Render.")
 
@@ -32,13 +32,11 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     code = update.message.text.strip()
 
-    # Si déjà vérifié, ignorer
     if user_id in users_verified:
-        return
+        return  # déjà vérifié
 
     if code == ACCESS_CODE:
         users_verified.add(user_id)
-
         keyboard = [
             [InlineKeyboardButton("🎯 Nouvelle prédiction", callback_data="predict")]
         ]
@@ -75,6 +73,7 @@ async def prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ===== MAIN =====
 def main():
+    # ✅ ApplicationBuilder utilisé à la place d'Updater
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))

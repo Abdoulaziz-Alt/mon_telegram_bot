@@ -1,42 +1,80 @@
 import os
 import random
-from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
-TOKEN = os.getenv("BOT_TOKEN")
+# ===== CONFIG =====
+ACCESS_CODE = "python123"
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-if not TOKEN:
-    print("ERREUR : BOT_TOKEN manquant")
-    exit(1)
+users_verified = set()
 
+# ===== COMMANDES =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 Bienvenue !\n\n"
-        "Bot de prédictions *simulées* (démo).\n"
-        "Clique pour recevoir une prédiction."
+        "👋 Bienvenue dans le bot *Lucky Jet Predictor* 🚀\n\n"
+        "🔐 Veuillez entrer votre *code d'accès* pour continuer.",
+        parse_mode="Markdown"
     )
 
-async def predict(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    code = update.message.text.strip()
+
+    if code == ACCESS_CODE:
+        users_verified.add(user_id)
+
+        keyboard = [
+            [InlineKeyboardButton("🎯 Nouvelle prédiction", callback_data="predict")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(
+            "✅ *Bienvenue sur Lucky Jet Predictor*\n\n"
+            "📊 Appuie sur *Nouvelle prédiction* pour recevoir une estimation.",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    else:
+        await update.message.reply_text("❌ Code incorrect. Réessaie.")
+
+async def prediction(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    user_id = query.from_user.id
     await query.answer()
 
-    prob = random.randint(60, 95)
-    mult = round(random.uniform(1.5, 5.0), 2)
-    time_now = datetime.now().strftime("%H:%M:%S")
+    if user_id not in users_verified:
+        await query.message.reply_text("🔐 Accès refusé. Entre d'abord le code.")
+        return
+
+    crash_value = round(random.uniform(1.00, 60.00), 2)
+    probability = random.randint(5, 95)
 
     await query.message.reply_text(
-        f"🔮 Prédiction simulée\n\n"
-        f"🕒 Heure : {time_now}\n"
-        f"📊 Probabilité : {prob}%\n"
-        f"✈️ Multiplicateur : x{mult}\n\n"
-        f"⚠️ Simulation uniquement"
+        f"🚀 *Prédiction Lucky Jet*\n\n"
+        f"💥 Crash estimé à : *{crash_value}x*\n"
+        f"📈 Probabilité : *{probability}%*\n\n"
+        f"⏰ Heure actuelle utilisée pour la prédiction.",
+        parse_mode="Markdown"
     )
 
-app = ApplicationBuilder().token(TOKEN).build()
+# ===== MAIN =====
+def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-keyboard = [[InlineKeyboardButton("🔮 Nouvelle prédiction", callback_data="predict")]]
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CallbackQueryHandler(predict, pattern="predict"))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(prediction))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_code))
 
-app.run_polling()
+    print("🤖 Bot Lucky Jet Predictor lancé...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()

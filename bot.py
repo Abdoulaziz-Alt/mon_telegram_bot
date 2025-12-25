@@ -14,6 +14,10 @@ from telegram.ext import (
 ACCESS_CODE = "python123"
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+# Vérification du token (IMPORTANT)
+if not BOT_TOKEN:
+    raise ValueError("❌ BOT_TOKEN manquant. Vérifie la variable d'environnement sur Render.")
+
 users_verified = set()
 
 # ===== COMMANDES =====
@@ -27,6 +31,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     code = update.message.text.strip()
+
+    # Si déjà vérifié, ignorer
+    if user_id in users_verified:
+        return
 
     if code == ACCESS_CODE:
         users_verified.add(user_id)
@@ -70,7 +78,7 @@ def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(prediction))
+    app.add_handler(CallbackQueryHandler(prediction, pattern="^predict$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_code))
 
     print("🤖 Bot Lucky Jet Predictor lancé...")
